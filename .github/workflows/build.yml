@@ -20,6 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Single-arch images (x86_64 only)
   linux-images:
     runs-on: ubuntu-latest
 
@@ -29,15 +30,8 @@ jobs:
         image:
           - env-alpine
           - env-archlinux
-          - env-debian:bookworm
-          - env-debian:trixie
-          - env-debian:latest
           - env-fedora
           - env-opensuse
-          - env-ubuntu:22.04
-          - env-ubuntu:24.04
-          - env-ubuntu:26.04
-          - env-ubuntu:latest
 
     name: linux/${{ matrix.image }}
 
@@ -48,9 +42,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Restore cache
         uses: actions/cache/restore@v4
@@ -64,13 +55,13 @@ jobs:
 
       - name: Detect env
         if: |
-          github.repository_owner == 'tarabah' &&
+          github.repository_owner == 'baranovmv' &&
           github.event_name == 'push' &&
           github.ref == 'refs/heads/main'
         run: |
           echo "ENABLE_PUSH=1" >> $GITHUB_ENV
 
-      - name: Run docker
+      - name: Build
         run: |
           set -x
           if [[ $ENABLE_PUSH = 1 ]]; then \
@@ -92,6 +83,134 @@ jobs:
           path: ${{ env.CACHE_TO }}
           key: ${{ runner.os }}-${{ matrix.image }}-${{ github.sha }}
 
+  # Multi-arch: build natively on each arch with -<arch> suffix tag
+  multiarch-amd64:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - env-debian:bookworm
+          - env-debian:trixie
+          - env-debian:latest
+          - env-ubuntu:22.04
+          - env-ubuntu:24.04
+          - env-ubuntu:26.04
+          - env-ubuntu:latest
+
+    name: amd64/${{ matrix.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup buildx
+        run: |
+          docker buildx create --use
+
+      - name: Detect env
+        if: |
+          github.repository_owner == 'baranovmv' &&
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/main'
+        run: |
+          echo "ENABLE_PUSH=1" >> $GITHUB_ENV
+
+      - name: Build
+        run: |
+          set -x
+          if [[ $ENABLE_PUSH = 1 ]]; then \
+            echo "${{ secrets.DOCKER_PASSWORD }}" \
+              | docker login --username "${{ secrets.DOCKER_USER }}" --password-stdin
+            ./make.py --push --tag-suffix=-amd64 ${{ matrix.image }}
+          else
+            ./make.py --tag-suffix=-amd64 ${{ matrix.image }}
+          fi
+
+  multiarch-arm64:
+    runs-on: ubuntu-24.04-arm
+
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - env-debian:bookworm
+          - env-debian:trixie
+          - env-debian:latest
+          - env-ubuntu:22.04
+          - env-ubuntu:24.04
+          - env-ubuntu:26.04
+          - env-ubuntu:latest
+
+    name: arm64/${{ matrix.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup buildx
+        run: |
+          docker buildx create --use
+
+      - name: Detect env
+        if: |
+          github.repository_owner == 'baranovmv' &&
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/main'
+        run: |
+          echo "ENABLE_PUSH=1" >> $GITHUB_ENV
+
+      - name: Build
+        run: |
+          set -x
+          if [[ $ENABLE_PUSH = 1 ]]; then \
+            echo "${{ secrets.DOCKER_PASSWORD }}" \
+              | docker login --username "${{ secrets.DOCKER_USER }}" --password-stdin
+            ./make.py --push --tag-suffix=-arm64 ${{ matrix.image }}
+          else
+            ./make.py --tag-suffix=-arm64 ${{ matrix.image }}
+          fi
+
+  # Combine arch-specific tags into multi-arch manifests
+  multiarch-manifest:
+    needs: [multiarch-amd64, multiarch-arm64]
+    runs-on: ubuntu-latest
+    if: |
+      github.repository_owner == 'baranovmv' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - env-debian:bookworm
+          - env-debian:trixie
+          - env-debian:latest
+          - env-ubuntu:22.04
+          - env-ubuntu:24.04
+          - env-ubuntu:26.04
+          - env-ubuntu:latest
+
+    name: manifest/${{ matrix.image }}
+
+    steps:
+      - name: Login to Docker Hub
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" \
+            | docker login --username "${{ secrets.DOCKER_USER }}" --password-stdin
+
+      - name: Create and push manifest
+        run: |
+          set -x
+          IMAGE="tarabah/${{ matrix.image }}"
+          docker manifest create "${IMAGE}" \
+            "${IMAGE}-amd64" \
+            "${IMAGE}-arm64"
+          docker manifest push "${IMAGE}"
+
+  # RPi OS Trixie (arm64 only, needs insecure entitlement)
   rpios-trixie:
     runs-on: ubuntu-24.04-arm
 
@@ -107,11 +226,11 @@ jobs:
 
       - name: Setup buildx
         run: |
-          docker buildx create --use
+          docker buildx create --use --buildkitd-flags '--allow-insecure-entitlement security.insecure'
 
       - name: Detect env
         if: |
-          github.repository_owner == 'tarabah' &&
+          github.repository_owner == 'baranovmv' &&
           github.event_name == 'push' &&
           github.ref == 'refs/heads/main'
         run: |

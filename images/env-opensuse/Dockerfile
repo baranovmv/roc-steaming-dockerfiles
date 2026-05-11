@@ -5,6 +5,7 @@ RUN zypper -n install \
     ccache \
     gcc-c++ \
     git \
+    gzip \
     python
 
 # for 3rd-parties
@@ -41,7 +42,9 @@ RUN zypper -n install \
     pipewire-devel \
     pipewire \
     wireplumber \
-    dbus-1
+    dbus-1 \
+    meson \
+    ninja
 
 # for fontconfig
 ENV HOME=/home

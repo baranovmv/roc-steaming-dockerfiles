@@ -42,7 +42,9 @@ RUN dnf install -y \
     pipewire-devel \
     pipewire \
     wireplumber \
-    dbus-daemon
+    dbus-daemon \
+    meson \
+    ninja-build
 
 # for fontconfig
 ENV HOME=/home

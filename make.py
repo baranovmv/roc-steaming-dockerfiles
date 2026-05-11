@@ -32,6 +32,9 @@ parser.add_argument('-C', '--no-cache', action='store_true', help="pass --no-cac
 parser.add_argument('-P', '--no-pull', action='store_true', help="don't pass --pull to docker build")
 parser.add_argument('--cache-from', type=str, help="from where to load buildx cache")
 parser.add_argument('--cache-to', type=str, help="to where to save buildx cache")
+parser.add_argument('--platform', type=str, help="platform(s) to build for (passed to docker buildx build)")
+parser.add_argument('--allow', type=str, help="security option (passed to docker buildx build --allow)")
+parser.add_argument('--tag-suffix', type=str, default='', help="suffix to append to image tags (e.g. -amd64, -arm64)")
 parser.add_argument('image', nargs='*', default=None)
 
 args = parser.parse_args()
@@ -83,11 +86,19 @@ for image in images:
             if osname != platform.system().lower():
                 continue
 
-            print_msg(f'processing image {image_fullname}:{tag}')
+            print_msg(f'processing image {image_fullname}:{tag}{args.tag_suffix}')
             print_cmd(f'cd {image_dir}')
 
             if platform.system() != 'Windows':
-                docker_args = ['buildx', 'build', '--output', 'type=docker']
+                # Multi-platform builds cannot use type=docker output;
+                # they must push to registry or just build without loading.
+                if args.platform and ',' in args.platform:
+                    if args.push:
+                        docker_args = ['buildx', 'build', '--output', 'type=registry']
+                    else:
+                        docker_args = ['buildx', 'build']
+                else:
+                    docker_args = ['buildx', 'build', '--output', 'type=docker']
             else:
                 docker_args = ['build']
 
@@ -103,9 +114,16 @@ for image in images:
                         os.makedirs(args.cache_to, exist_ok=True)
                     docker_args += ['--cache-to', f'type=local,dest={args.cache_to}']
 
+            if args.platform:
+                docker_args += ['--platform', args.platform]
+            if args.allow:
+                docker_args += ['--allow', args.allow]
+
+            full_tag = f'{tag}{args.tag_suffix}'
+
             docker_args += [
                 '-f', dockerfile,
-                '-t', f'{image_fullname}:{tag}',
+                '-t', f'{image_fullname}:{full_tag}',
             ]
 
             if build_args:
@@ -116,7 +134,8 @@ for image in images:
 
             run_cmd('docker', *docker_args)
 
-            if args.push:
-                run_cmd('docker', 'push', f'{image_fullname}:{tag}')
+            if args.push and not (args.platform and ',' in args.platform):
+                # Multi-platform builds push via type=registry output, skip explicit push
+                run_cmd('docker', 'push', f'{image_fullname}:{full_tag}')
 
     os.chdir('../..')

@@ -46,8 +46,11 @@ RUN pacman --noconfirm -S \
 # for pipewire
 RUN pacman --noconfirm -S \
     pipewire \
-    libwireplumber \
-    dbus
+    pipewire-audio \
+    wireplumber \
+    dbus \
+    meson \
+    ninja
 
 # for fontconfig
 ENV HOME=/home

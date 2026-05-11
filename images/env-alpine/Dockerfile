@@ -45,4 +45,6 @@ RUN apk add \
     pipewire-dev \
     pipewire \
     wireplumber \
-    dbus
+    dbus \
+    meson \
+    ninja
