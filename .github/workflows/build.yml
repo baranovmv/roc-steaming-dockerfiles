@@ -28,29 +28,16 @@ jobs:
       matrix:
         image:
           - env-alpine
-          - env-android:jdk17
-          - env-android:jdk21
-          - env-android:latest
           - env-archlinux
-          - env-debian
-          - env-docs
+          - env-debian:bookworm
+          - env-debian:trixie
+          - env-debian:latest
           - env-fedora
-          - env-flutter:android
-          - env-flutter:linux
           - env-opensuse
-          - env-ubuntu:14.04
-          - env-ubuntu:16.04
-          - env-ubuntu:18.04
-          - env-ubuntu:20.04
           - env-ubuntu:22.04
           - env-ubuntu:24.04
+          - env-ubuntu:26.04
           - env-ubuntu:latest
-          - env-ubuntu:nolibs
-          - toolchain-aarch64-linux-gnu
-          - toolchain-arm-bcm2708-linux-gnueabihf
-          - toolchain-arm-linux-gnueabihf
-          - toolchain-linux-android
-          - toolchain-mips-openwrt-linux-atheros
 
     name: linux/${{ matrix.image }}
 
@@ -61,6 +48,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Restore cache
         uses: actions/cache/restore@v4
@@ -74,7 +64,7 @@ jobs:
 
       - name: Detect env
         if: |
-          github.repository_owner == 'roc-streaming' &&
+          github.repository_owner == 'tarabah' &&
           github.event_name == 'push' &&
           github.ref == 'refs/heads/main'
         run: |
@@ -102,76 +92,47 @@ jobs:
           path: ${{ env.CACHE_TO }}
           key: ${{ runner.os }}-${{ matrix.image }}-${{ github.sha }}
 
-  windows-images:
-    runs-on: windows-latest
+  rpios-trixie:
+    runs-on: ubuntu-latest
 
-    strategy:
-      fail-fast: false
-      matrix:
-        image:
-          - env-flutter
-
-    name: windows/${{ matrix.image }}
+    name: linux/env-rpios-trixie
 
     env:
-      CACHE_DIR: C:\dockercache
+      CACHE_FROM: /tmp/dockercache
+      CACHE_TO: /tmp/dockercache-new
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Restore cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ env.CACHE_DIR }}
-          key: ${{ runner.os }}-${{ matrix.image }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-      - name: Load images
+      - name: Setup buildx
         run: |
-          Set-PSDebug -Trace 1
-          if (Test-Path -Path ${{ env.CACHE_DIR }}\rocstreaming) {
-            Get-ChildItem -Path ${{ env.CACHE_DIR }}\rocstreaming -Filter *.tar | ForEach-Object {
-              docker load -i $_.FullName
-              Remove-Item $_.FullName
-            }
-          }
+          docker buildx create --use
 
       - name: Detect env
         if: |
-          github.repository_owner == 'roc-streaming' &&
+          github.repository_owner == 'tarabah' &&
           github.event_name == 'push' &&
           github.ref == 'refs/heads/main'
         run: |
-          echo "ENABLE_PUSH=1" >> $env:GITHUB_ENV
+          echo "ENABLE_PUSH=1" >> $GITHUB_ENV
 
-      - name: Run docker
+      - name: Build env-rpios-trixie
         run: |
-          Set-PSDebug -Trace 1
-          if ($env:ENABLE_PUSH -eq "1") {
-            $username = "${{ secrets.DOCKER_USER }}"
-            $password = "${{ secrets.DOCKER_PASSWORD }}"
-            $password | docker login --username $username --password-stdin
-            python make.py --push ${{ matrix.image }}
-          } else {
-            python make.py ${{ matrix.image }}
-          }
-
-      - name: Save images
-        if: always()
-        run: |
-          Set-PSDebug -Trace 1
-          New-Item -ItemType Directory -Path ${{ env.CACHE_DIR }}\rocstreaming -Force `
-            -ErrorAction SilentlyContinue
-          docker images --format '{{.Repository}}:{{.Tag}}' `
-            | Select-String -Pattern "^rocstreaming/${{ matrix.image }}(:|$)" | ForEach-Object {
-              $image = $_.ToString()
-              $file = $image -Replace ":", "-"
-              docker save $image -o "${{ env.CACHE_DIR }}\$file.tar"
-          }
-
-      - name: Save cache
-        uses: actions/cache/save@v4
-        if: always()
-        with:
-          path: ${{ env.CACHE_DIR }}
-          key: ${{ runner.os }}-${{ matrix.image }}-${{ github.sha }}
+          set -x
+          if [[ $ENABLE_PUSH = 1 ]]; then \
+            echo "${{ secrets.DOCKER_PASSWORD }}" \
+              | docker login --username "${{ secrets.DOCKER_USER }}" --password-stdin
+            ./make.py --push \
+              --platform=linux/arm64 \
+              --allow=security.insecure \
+              env-rpios-trixie
+          else
+            ./make.py \
+              --platform=linux/arm64 \
+              --allow=security.insecure \
+              env-rpios-trixie
+          fi

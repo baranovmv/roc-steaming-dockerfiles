@@ -57,3 +57,12 @@ RUN apt-get install -y \
     pulseaudio \
     ragel \
     scons
+
+# for pipewire
+RUN apt-get install -y \
+    libpipewire-0.3-dev \
+    libspa-0.2-dev \
+    pipewire \
+    pipewire-bin \
+    wireplumber \
+    dbus

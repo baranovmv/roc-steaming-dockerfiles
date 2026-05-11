@@ -37,6 +37,13 @@ RUN dnf install -y \
     sox-devel \
     speexdsp-devel
 
+# for pipewire
+RUN dnf install -y \
+    pipewire-devel \
+    pipewire \
+    wireplumber \
+    dbus-daemon
+
 # for fontconfig
 ENV HOME=/home
 RUN chmod a+wx /home

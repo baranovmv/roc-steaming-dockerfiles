@@ -32,6 +32,8 @@ parser.add_argument('-C', '--no-cache', action='store_true', help="pass --no-cac
 parser.add_argument('-P', '--no-pull', action='store_true', help="don't pass --pull to docker build")
 parser.add_argument('--cache-from', type=str, help="from where to load buildx cache")
 parser.add_argument('--cache-to', type=str, help="to where to save buildx cache")
+parser.add_argument('--platform', type=str, help="platform(s) to build for (passed to docker buildx build)")
+parser.add_argument('--allow', type=str, help="security option (passed to docker buildx build --allow)")
 parser.add_argument('image', nargs='*', default=None)
 
 args = parser.parse_args()
@@ -52,7 +54,7 @@ for image in images:
         image_shortname = image
         image_tag = ''
 
-    image_fullname = f'rocstreaming/{image_shortname}'
+    image_fullname = f'tarabah/{image_shortname}'
     image_dir = f'images/{image_shortname}'
 
     os.chdir(image_dir)
@@ -102,6 +104,11 @@ for image in images:
                     if not DRY_RUN:
                         os.makedirs(args.cache_to, exist_ok=True)
                     docker_args += ['--cache-to', f'type=local,dest={args.cache_to}']
+
+            if args.platform:
+                docker_args += ['--platform', args.platform]
+            if args.allow:
+                docker_args += ['--allow', args.allow]
 
             docker_args += [
                 '-f', dockerfile,

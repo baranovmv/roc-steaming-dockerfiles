@@ -43,6 +43,12 @@ RUN pacman --noconfirm -S \
     sox \
     speexdsp
 
+# for pipewire
+RUN pacman --noconfirm -S \
+    pipewire \
+    libwireplumber \
+    dbus
+
 # for fontconfig
 ENV HOME=/home
 RUN chmod a+wx /home

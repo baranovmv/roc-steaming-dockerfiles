@@ -39,3 +39,10 @@ RUN apk add \
     scons \
     sox-dev \
     speexdsp-dev
+
+# for pipewire
+RUN apk add \
+    pipewire-dev \
+    pipewire \
+    wireplumber \
+    dbus

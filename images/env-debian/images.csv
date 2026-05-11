@@ -1,2 +1,4 @@
 DOCKERFILE;ARGS (comma-separated list);TAG
-;;latest
+bookworm/Dockerfile;;bookworm
+trixie/Dockerfile;;trixie
+trixie/Dockerfile;;latest

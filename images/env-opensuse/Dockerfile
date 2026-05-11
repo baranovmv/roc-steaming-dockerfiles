@@ -36,6 +36,13 @@ RUN zypper -n install \
     sox-devel \
     speexdsp-devel
 
+# for pipewire
+RUN zypper -n install \
+    pipewire-devel \
+    pipewire \
+    wireplumber \
+    dbus-1
+
 # for fontconfig
 ENV HOME=/home
 RUN chmod a+wx /home

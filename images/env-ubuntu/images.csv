@@ -1,9 +1,5 @@
 DOCKERFILE;ARGS (comma-separated list);TAG
-14.04/Dockerfile;;
-16.04/Dockerfile;;
-18.04/Dockerfile;;
-20.04/Dockerfile;;
 22.04/Dockerfile;;
 24.04/Dockerfile;;
-24.04/Dockerfile;;latest
-nolibs/Dockerfile;;
+26.04/Dockerfile;;
+26.04/Dockerfile;;latest
