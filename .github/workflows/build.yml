@@ -93,7 +93,7 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.image }}-${{ github.sha }}
 
   rpios-trixie:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
 
     name: linux/env-rpios-trixie
 
@@ -104,9 +104,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Setup buildx
         run: |
@@ -127,12 +124,10 @@ jobs:
             echo "${{ secrets.DOCKER_PASSWORD }}" \
               | docker login --username "${{ secrets.DOCKER_USER }}" --password-stdin
             ./make.py --push \
-              --platform=linux/arm64 \
               --allow=security.insecure \
               env-rpios-trixie
           else
             ./make.py \
-              --platform=linux/arm64 \
               --allow=security.insecure \
               env-rpios-trixie
           fi
