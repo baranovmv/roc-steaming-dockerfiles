@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y \
     btrfs-progs \
     build-essential \
     ca-certificates \
+    cmake \
     cryptsetup \
     curl \
     dbus-user-session \
@@ -51,6 +52,7 @@ RUN apt-get update && apt-get install -y \
     rsync \
     uidmap \
     uuid-runtime \
+    xz-utils \
     zip \
     && rm -rf /var/lib/apt/lists/*
 

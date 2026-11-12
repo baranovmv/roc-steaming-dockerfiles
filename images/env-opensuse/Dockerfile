@@ -9,7 +9,7 @@ RUN zypper -n install \
     gcc-c++ \
     git \
     gzip \
-    python
+    python3
 
 # for 3rd-parties
 RUN zypper -n install \
