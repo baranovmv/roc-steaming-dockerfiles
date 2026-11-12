@@ -76,5 +76,8 @@ RUN --security=insecure \
 FROM scratch
 COPY --from=bootstrap /rootfs /
 
+# https://docs.astral.sh/uv/guides/integration/docker/
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
 ENV DEBIAN_FRONTEND=noninteractive
 ENV HOME=/home

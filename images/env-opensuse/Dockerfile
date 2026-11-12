@@ -1,5 +1,8 @@
 FROM opensuse/leap:latest
 
+# https://docs.astral.sh/uv/guides/integration/docker/
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
 # compilers and tools
 RUN zypper -n install \
     ccache \

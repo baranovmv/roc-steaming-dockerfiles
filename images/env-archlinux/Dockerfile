@@ -2,6 +2,9 @@ FROM archlinux:latest
 
 RUN pacman --noconfirm -Syu
 
+# https://docs.astral.sh/uv/guides/integration/docker
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
 # compilers and tools
 RUN pacman --noconfirm -S \
     ccache \
